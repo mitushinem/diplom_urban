@@ -1,0 +1,8 @@
+loguru
+aiogram
+requests
+pycbrf
+pydantic
+sqlalchemy
+aiogram_calendar
+python-dotenv
