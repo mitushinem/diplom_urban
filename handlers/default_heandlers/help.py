@@ -9,5 +9,3 @@ router_help = Router()
 async def bot_help(message: Message):
     text = [f'/<b>{command}</b> - {desk}' for command, desk in DEFAULT_COMMANDS]
     await message.answer('\n'.join(text))
-
-

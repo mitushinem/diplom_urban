@@ -2,7 +2,6 @@ import json
 import requests
 from requests import RequestException
 from config.config import HEADERS_HOTEL_API, URL_API, logger
-from requests.exceptions import ConnectTimeout, HTTPError, ConnectionError
 from typing import Union
 
 
@@ -12,7 +11,6 @@ def api_request(method_endswith, params: dict, method_type: str):
     :param params: Параметры, если locations/v3/search, то {'q': 'Рига', 'locale': 'ru_RU'}
     :param method_type: GET\POST
     """
-    # TODO описать typing
 
     url_api = f'https://hotels4.p.rapidapi.com/{method_endswith}'
 
