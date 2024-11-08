@@ -1,6 +1,6 @@
-from config.config import logger
+from config.config import DEFAULT_COMMANDS
+from database.db import set_user
 from filters.custom import IsCityNameCorrect, IsDigitCorrectFilter
-# from database.db import add_user
 from rapid_api.hotels import get_id_destinations
 from keyboards.inline.inline_keyboard import *
 from keyboards.reply.reply_keyboard import accept_keyboard
@@ -10,14 +10,16 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from aiogram import Router
-from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
+from aiogram_calendar import SimpleCalendar
+from config.config import logger
+
 
 router_lowprice = Router()
 
 
 @router_lowprice.message(Command('lowprice'))
 async def bot_lowprice(message: Message, state: FSMContext) -> None:
-    # add_user(message.from_user.full_name, message.from_user.id)
+    await set_user(message.from_user.id, message.from_user.full_name)
     await state.set_state(StateUser.city)
     await state.update_data(command=message.text)
     await message.answer('<b>В каком городе будем искать отели?</b>')
@@ -51,10 +53,11 @@ async def get_city(message: Message, state: FSMContext) -> None:
                              f'Ознакомтесь с предложенными вариантами и выберите наиболее подходящий',
                              reply_markup=keyboard_gen_id_destinations(id_destinations))
     else:
-        # TODO поправить reply_markup=keyboard_back()
-        await message.answer('По вашему запросу ничего не найдено. Повторите запрос заново',
-                             reply_markup=keyboard_back())
+        logger.info(f'По запросу {message.text} ничего не найдено')
+        await message.answer('По вашему запросу ничего не найдено. Повторите запрос заново')
         await state.clear()
+        text = [f'/<b>{command}</b> - {desk}' for command, desk in DEFAULT_COMMANDS]
+        await message.answer('\n'.join(text))
 
 
 @router_lowprice.message(IsDigitCorrectFilter(1, 25), StateUser.hotel_count)

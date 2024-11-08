@@ -1,26 +1,28 @@
 from datetime import datetime, timedelta
 from aiogram import F
 from aiogram.filters.callback_data import CallbackData
+from database.db import select_all_record, select_all_record_for_days, delete_all_record
+from handlers.custom_heandlers.history import get_message_history
 from keyboards.reply.reply_keyboard import accept_keyboard
 from loader import dp
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 from states.state import StateUser
 from aiogram_calendar import SimpleCalendarCallback, get_user_locale, SimpleCalendar
+from config.config import logger, DEFAULT_COMMANDS
+from utils.utils import get_data_for_message_history
 
 
-#
-# @bot.callback_query_handler(func=lambda call: call.data == 'start')
-# def callback_start(call: CallbackQuery) -> None:
-#     """
-#     Обработчик нажатия по отмена
-#     """
-#     bot.delete_state(call.from_user.id, call.message.chat.id)
-#     bot.delete_message(call.message.chat.id, call.message.message_id)
-#     msg = bot.send_message(call.from_user.id, 'Операция отменена. Повторите запрос с новыми параметрами поиска')
-#     bot_help(msg)
-#
-#
+@dp.callback_query(F.data == 'start')
+async def callback_start(call: CallbackQuery, state: FSMContext) -> None:
+    """
+    Обработчик нажатия по отмена
+    """
+    await state.clear()
+    text = [f'/<b>{command}</b> - {desk}' for command, desk in DEFAULT_COMMANDS]
+    await call.message.answer('Операция отменена!')
+    await call.message.answer('\n'.join(text))
+    await call.answer()
 
 
 @dp.callback_query(F.data.startswith('_state_'))
@@ -38,11 +40,10 @@ async def callback_city(call: CallbackQuery, state: FSMContext) -> None:
     if data['command'].endswith('price'):
         await state.set_state(StateUser.hotel_count)
         await call.message.answer('Сколько отелей вывести в результатах поиска?')
-        await call.answer()
-    elif data['command'].endswith('bestdeal'):
+    elif data['command'].endswith('deal'):
         await state.set_state(StateUser.price_range)
-        await call.message.answer('Введите диапозон цен через пробел?')
-        await call.answer()
+        await call.message.answer('Введите диапазон цен через пробел?')
+    await call.answer()
 
 
 @dp.callback_query(SimpleCalendarCallback.filter())
@@ -89,38 +90,77 @@ async def callback_foto_download(call: CallbackQuery, state: FSMContext) -> None
             await state.update_data(load_image=True)
             await state.set_state(StateUser.foto_count)
             await call.message.answer('Сколько фотографий отеля загружать, но не более 5?')
-            await call.answer()
         case 'no_foto':
             await state.update_data(load_image=False)
             await state.set_state(StateUser.result)
 
             await call.message.answer('Для продолжения требуется подтверждение...',
                                       reply_markup=accept_keyboard())
+    await call.answer()
 
-#
-# @bot.callback_query_handler(func=lambda call: call.data.startswith('is_'))
-# def callback_history(call: CallbackQuery) -> None:
-#     try:
-#         bot.delete_message(call.message.chat.id, call.message.message_id)
-#         match call.data:
-#             case 'is_today':
-#                 for i_msg in select_all_record_for_days(call.from_user.id):
-#                     bot.send_message(call.from_user.id, '\n'.join(get_message_history(i_msg)),
-#                                      disable_web_page_preview=True)
-#             case 'is_week':
-#                 pass
-#                 for i_msg in select_all_record_for_days(call.from_user.id, days=7):
-#                     bot.send_message(call.from_user.id, '\n'.join(get_message_history(i_msg)),
-#                                      disable_web_page_preview=True)
-#             case 'is_month':
-#                 for i_msg in select_all_record_for_days(call.from_user.id, days=30):
-#                     bot.send_message(call.from_user.id, '\n'.join(get_message_history(i_msg)),
-#                                      disable_web_page_preview=True)
-#             case 'is_all':
-#                 for i_msg in select_all_record(call.from_user.id):
-#                     bot.send_message(call.from_user.id, '\n'.join(get_message_history(i_msg)),
-#                                      disable_web_page_preview=True)
-#             case 'is_delete':
-#                 delete_all_record(call.from_user.id)
-#     except Exception as err:
-#         bot.send_message(call.from_user.id, err)
+
+@dp.callback_query(F.data.startswith('is_'))
+async def callback_history(call: CallbackQuery) -> None:
+    try:
+        match call.data:
+            case 'is_today':
+                all_record = await select_all_record_for_days(call.from_user.id)
+                if all_record is not None:
+                    for rec in all_record:
+                        data = get_data_for_message_history(rec)
+                        await call.message.answer('\n'.join(get_message_history(data)), disable_web_page_preview=True)
+                else:
+                    await call.message.answer(
+                        f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                    logger.info(f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                await call.answer()
+
+            case 'is_week':
+                all_record = await select_all_record_for_days(call.from_user.id, days=7)
+                if all_record is not None:
+                    for rec in all_record:
+                        data = get_data_for_message_history(rec)
+                        await call.message.answer('\n'.join(get_message_history(data)), disable_web_page_preview=True)
+                else:
+                    await call.message.answer(
+                        f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                    logger.info(f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                await call.answer()
+
+            case 'is_month':
+                all_record = await select_all_record_for_days(call.from_user.id, days=30)
+                if all_record is not None:
+                    for rec in all_record:
+                        data = get_data_for_message_history(rec)
+                        await call.message.answer('\n'.join(get_message_history(data)), disable_web_page_preview=True)
+                else:
+                    await call.message.answer(
+                        f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                    logger.info(f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+
+                await call.answer()
+
+            case 'is_all':
+                all_record = await select_all_record(call.from_user.id)
+                if all_record is not None:
+                    for rec in all_record:
+                        data = get_data_for_message_history(rec)
+                        await call.message.answer('\n'.join(get_message_history(data)), disable_web_page_preview=True)
+                else:
+                    await call.message.answer(
+                        f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+                    logger.info(f'У пользователя с telegram_id: {call.from_user.id} нет записей в истории')
+
+                await call.answer()
+
+            case 'is_delete':
+                await delete_all_record(call.from_user.id)
+                await call.message.answer(f'Все записи успешно удалены')
+                logger.info(f'Все записи для пользователя с telegram_id: {call.from_user.id} успешно удалены')
+
+        await call.message.answer('Запрос выполнен')
+
+    except Exception as err:
+        await call.message.answer(err.__str__())
+        await call.answer()
+        logger.error(err)

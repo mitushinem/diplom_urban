@@ -35,21 +35,18 @@ def keyboard_foto_check() -> InlineKeyboardMarkup:
          InlineKeyboardButton(text='Нет', callback_data='no_foto')]
     ])
 
-#
-# def keyboard_history() -> InlineKeyboardMarkup:
-#     """
-#     Генерация Inline клавиатуры с вариантами городов при вводе запроса пользователя
-#     """
-#     keyboard = InlineKeyboardMarkup()
-#
-#     key_1 = InlineKeyboardButton(text='За сегодня', callback_data='is_today')
-#     key_2 = InlineKeyboardButton(text='За неделю', callback_data='is_week')
-#     key_3 = InlineKeyboardButton(text='За месяц', callback_data='is_month')
-#     key_2_1 = InlineKeyboardButton(text='Вся история', callback_data='is_all')
-#     key_3_1 = InlineKeyboardButton(text='Удалить всю историю', callback_data='is_delete')
-#
-#     keyboard.add(key_1, key_2, key_3)
-#     keyboard.add(key_2_1)
-#     keyboard.add(key_3_1)
-#
-#     return keyboard
+
+def keyboard_history() -> InlineKeyboardMarkup:
+    """
+    Генерация Inline клавиатуры с вариантами городов при вводе запроса пользователя
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+                                [InlineKeyboardButton(text='За сегодня', callback_data='is_today'),],
+                                [InlineKeyboardButton(text='За неделю', callback_data='is_week'),],
+                                [InlineKeyboardButton(text='За месяц', callback_data='is_month'),],
+                                [
+                                    InlineKeyboardButton(text='Вся история', callback_data='is_all'),
+                                    InlineKeyboardButton(text='Удалить всю историю', callback_data='is_delete')
+                                ]
+                            ])
+

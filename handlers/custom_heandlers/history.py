@@ -1,22 +1,27 @@
-# import json
-# from telebot.types import Message
-# from keyboards.inline.inline_keyboard import keyboard_history
-# from loader import bot
-#
-#
-# def get_message_history(query: dict) -> list:
-#     list_url = json.loads(query['hotels'])['url']
-#
-#     msg = [
-#         '<b>Дата запроса: </b>{}'.format(query['created_at'].strftime('%Y-%m-%d %H:%M:%S')),
-#         '<b>Команда: </b>{}\n'.format(query['command']),
-#         '<b>Город: </b>{}\n'.format(query['city']),
-#         '<b>Список найденных отелей:\n</b>',
-#         '{}'.format('\n'.join(list_url))
-#     ]
-#     return msg
-#
-#
-# @bot.message_handler(commands=['history'])
-# def bot_history(message: Message) -> None:
-#     bot.send_message(message.from_user.id, 'Выберите вариант поиска запросов', reply_markup=keyboard_history())
+from aiogram.types import Message
+
+from database.db import set_user
+from keyboards.inline.inline_keyboard import keyboard_history
+from aiogram import Router
+from aiogram.filters import Command
+
+
+router_history = Router()
+
+
+def get_message_history(history_data) -> list:
+
+    msg = [
+        '<b>Дата запроса: </b>{}'.format(history_data['created_at']),
+        '<b>Команда: </b>{}\n'.format(history_data['command']),
+        '<b>Город: </b>{}\n'.format(history_data['city']),
+        '<b>Список найденных отелей:\n</b>',
+        '{}'.format(history_data['hotels'])
+    ]
+    return msg
+
+
+@router_history.message(Command('history'))
+async def bot_history(message: Message) -> None:
+    await set_user(message.from_user.id, message.from_user.full_name)
+    await message.answer('Выберите вариант поиска запросов', reply_markup=keyboard_history())

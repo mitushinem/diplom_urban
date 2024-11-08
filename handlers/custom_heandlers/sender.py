@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from config.config import URL_API, DEFAULT_COMMANDS
-# #from database.db import add_record
+from database.db import add_record
 from rapid_api.hotels import generate_json_info_hotel, api_request
 from aiogram import F
 from aiogram.types import InputMediaPhoto, Message, ReplyKeyboardRemove
@@ -123,8 +123,12 @@ async def send_message(message: Message, state: FSMContext) -> None:
 
         name_hotels['url'].append(msg[0])
 
-    # add_record(telegram_id=message.from_user.id, command=data['command'],
-    #            hotels=json.dumps(name_hotels), date=datetime.now(), city=data['city'])
+
+    await add_record(telegram_id=message.from_user.id,
+                  command=data['command'],
+                  hotels='\n'.join(name_hotels['url']),
+                  city=data['city'])
+
     await state.clear()
 
     text = [f'/<b>{command}</b> - {desk}' for command, desk in DEFAULT_COMMANDS]

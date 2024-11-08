@@ -2,7 +2,9 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram import Router
-from filters.custom import IsPriceCorrect, IsDigitCorrectFilter
+
+from database.db import set_user
+from filters.custom import IsPriceCorrect
 from states.state import StateUser
 
 
@@ -11,7 +13,7 @@ router_bestdeal = Router()
 
 @router_bestdeal.message(Command('bestdeal'))
 async def bot_bestdeal(message: Message, state: FSMContext) -> None:
-    # add_user(message.from_user.full_name, message.from_user.id)
+    await set_user(message.from_user.id, message.from_user.full_name)
     await state.set_state(StateUser.city)
     await state.update_data(command=message.text)
     await message.answer('<b>В каком городе будем искать отели?</b>')
