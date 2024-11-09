@@ -1,59 +1,49 @@
-import json
-import requests
-from requests import RequestException
 from config.config import HEADERS_HOTEL_API, URL_API, logger
 from typing import Union
+import httpx
 
 
-def api_request(method_endswith, params: dict, method_type: str):
-    """
-    :param method_endswith: Меняется в зависимости от запроса. locations/v3/search либо properties/v2/list
-    :param params: Параметры, если locations/v3/search, то {'q': 'Рига', 'locale': 'ru_RU'}
-    :param method_type: GET\POST
-    """
-
+async def api_request(method_endswith, params: dict, method_type: str):
     url_api = f'https://hotels4.p.rapidapi.com/{method_endswith}'
 
-    match method_type:
-        case 'GET':
-            return get_request(url=url_api, params=params)
-        case 'POST':
-            return post_request(url=url_api, payload=params)
+    async with httpx.AsyncClient() as client:
+        if method_type == 'GET':
+            return await get_request(client, url=url_api, params=params)
+        elif method_type == 'POST':
+            return await post_request(client, url=url_api, payload=params)
 
 
-def get_request(url: str, params: dict):
+async def get_request(client: httpx.AsyncClient, url: str, params: dict):
     """
-    GET запрос на сервер
-    """
-    try:
-        response = requests.get(url=url, headers=HEADERS_HOTEL_API, params=params, timeout=15)
-        if response.status_code == requests.codes.ok:
-            return response.text
-        else:
-            response.raise_for_status()
-    except RequestException as err:
-        logger.error(str(err))
-
-
-def post_request(url, payload):
-    """
-    Отправка POST запроса на сервер, получение ответа в json
+    Асинхронный GET запрос на сервер
     """
     try:
-        response = requests.post(url=url, headers=HEADERS_HOTEL_API, json=payload, timeout=15)
-        if response.status_code == requests.codes.ok:
-            return response.text
-        else:
-            response.raise_for_status()
-
-    except RequestException as err:
-        logger.error(str(err))
+        response = await client.get(url, headers=HEADERS_HOTEL_API, params=params, timeout=15)
+        response.raise_for_status()  # Вызывает исключение для статусов, отличных от 2xx
+        return response.text
+    except httpx.RequestError as err:
+        logger.error(f"Ошибка при выполнении GET запроса {err}")
+        return None
 
 
-def get_id_destinations(query: str, locale: tuple) -> list[tuple]:
+async def post_request(client: httpx.AsyncClient, url: str, payload: dict):
     """
-    Метод получает списка возможных городов по запросу пользователя. Поиск по двум локалям.
-    На вход поступает точный или примерный запрос от пользователя с названием региона поиска
+    Асинхронный POST запрос на сервер
+    """
+    try:
+        response = await client.post(url, headers=HEADERS_HOTEL_API, json=payload, timeout=15)
+        response.raise_for_status()  # Вызывает исключение для статусов, отличных от 2xx
+        return response.text
+    except httpx.RequestError as err:
+        logger.error(f"Ошибка при выполнении POST запроса {err}")
+        return None
+
+
+async def get_id_destinations(query: str, locale: tuple) -> list[tuple]:
+    """
+    Асинхронный метод получает список возможных городов по запросу пользователя.
+    Поиск по двум локалям.
+
     :param query: str строка запроса поиска от пользователя
     :param locale: Tuple (локаль, валюта)
 
@@ -66,17 +56,27 @@ def get_id_destinations(query: str, locale: tuple) -> list[tuple]:
             'q': query,
             'locale': locale[0],
         }
-        response = api_request(method_endswith=URL_API['search_v3'], method_type='GET', params=query_json)
-        data = json.loads(response)
 
-        if data['sr']:
-            return [(i_elem['regionNames']['shortName'], i_elem['gaiaId']) for i_elem in data['sr']
-                    if i_elem['type'] == 'CITY']
-        else:
-            raise ValueError(f'Регион "{query}" не найден. Выполнение невозможно')
+        # Асинхронный запрос с использованием httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"https://hotels4.p.rapidapi.com/{URL_API['search_v3']}", params=query_json,
+                                        headers=HEADERS_HOTEL_API, timeout=15)
 
+            response.raise_for_status()  # Вызывает исключение для статусов, отличных от 2xx
+            data = response.json()
+
+            if data.get('sr'):
+                return [(i_elem['regionNames']['shortName'], i_elem['gaiaId']) for i_elem in data['sr']
+                        if i_elem['type'] == 'CITY']
+            else:
+                raise ValueError(f'Регион "{query}" не найден. Выполнение невозможно')
+
+    except httpx.RequestError as err:
+        logger.error(f"Ошибка запроса: {err}")
+    except ValueError as err:
+        logger.error(f"Ошибка обработки данных: {err}")
     except Exception as err:
-        logger.error(err.args)
+        logger.error(f"Неизвестная ошибка: {err}")
 
 
 def generate_json_info_hotel(date_dict: dict, command: Union[str, None] = None) -> dict:

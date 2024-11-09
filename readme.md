@@ -1,8 +1,8 @@
-# Telrgram Bot for Hotels.com
+# Telergram Bot for Hotels.com
 
 
 
-Бот реализован на Python 3.10 и использует для работы API rapidapi.com. Для правильной и корректной работы бота необходимо дополнительно установить библиотеки из requirements.txt 
+Бот реализован на Python 3.13 и использует для работы API rapidapi.com. Для правильной и корректной работы бота необходимо дополнительно установить библиотеки из requirements.txt 
 
 **Бот производит поиск отелей по каталогу сайта Hotels.com по заданным критериям.**  
 
@@ -24,17 +24,40 @@
 
 4. Создать файл **.env** и заполнить его по аналогии с **.env.template**
 
-5. Запустить бота командой **python main.py**
+5. Запуск миграции  
+
+   ```
+     alembic init migration
+   ```
+6. В файл env.ry добавить код. Это требуется для корректной миграции в асинхронном режиме работы
+     ```
+    from config.config import settings
+    from database.models import History, User #noqa
+    from database.models import Base
+   
+   if config.config_file_name is not None:
+        fileConfig(config.config_file_name)
+
+   config.set_main_option('sqlalchemy.url', settings.DATABASE_URL_asyncpg + '?async_fallback=true')
+   target_metadata = Base.metadata
+    ```
+7. запуск команд для создания таблиц в БД. Сама база должна быть создана
+   ```
+         alembic revision --autogenerate -m "init"
+         alembic upgrade head
+   ```  
+
+7. Запустить бота командой **python main.py**
 
 
 
 ## Описание модулей
 
-Для работы бота используется БД sqlite3. 
+Для работы бота используется БД PostgreSQL. 
 
 Бот состоит из следующих модулей:
 
-1. **config_data** – содержит настройки конфигурации
+1. **config** – содержит настройки конфигурации
 2. **database** - содержит описание моделей и методы работы с БД. hotels-tb.db может отсутствовать, создается при первом старте бота
 3. **filters** - custom фильтры для определения ввода данных от пользователя
 4. **handlers** - в данном модуле описана работа всех команд бота, а также callback обработчики
@@ -56,11 +79,3 @@
 - **highprice** - вывод самых дорогих отелей
 - **bestdeal** - выбрать отели по своим параметрам: расстояние от центра и ценовые диапазоны
 - **history** - история запросов по работе с ботом
-
-
-
-## Примеры вывода сообщений
-
-![111.jpg](https://ie.wampi.ru/2022/06/09/111.jpg)
-
-![222aa05c2d4710ea9d9.jpg](https://ie.wampi.ru/2022/06/09/222aa05c2d4710ea9d9.jpg)

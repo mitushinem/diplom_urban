@@ -50,7 +50,6 @@ async def send_message(message: Message, state: FSMContext) -> None:
         'url': []
     }
 
-    # bot.delete_message(message.chat.id, message.message_id)
     reply_remove = ReplyKeyboardRemove()
     await message.answer('Ожидайте, запрос обрабатывается...', reply_markup=reply_remove)
 
@@ -60,7 +59,7 @@ async def send_message(message: Message, state: FSMContext) -> None:
 
     payload = generate_json_info_hotel(date_dict=data, command=data['command'])
 
-    resolv_data = json.loads(api_request(method_endswith=URL_API['list_v2'],
+    resolv_data = json.loads(await api_request(method_endswith=URL_API['list_v2'],
                                          method_type='POST',
                                          params=payload))
 
@@ -98,7 +97,7 @@ async def send_message(message: Message, state: FSMContext) -> None:
                 'propertyId': t_dict['id']
             }
 
-            get_detail_hotel = json.loads(api_request(method_endswith=URL_API['get_detail_v2'],
+            get_detail_hotel = json.loads(await api_request(method_endswith=URL_API['get_detail_v2'],
                                                       method_type='POST', params=payload_v2_detail))
 
             if data['load_image']:
