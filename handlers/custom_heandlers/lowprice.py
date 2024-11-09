@@ -47,7 +47,7 @@ async def get_city(message: Message, state: FSMContext) -> None:
 
     await message.answer("<b>Пожалуйста подождите. Запрос выполняется...</b>")
 
-    id_destinations = get_id_destinations(query=message.text, locale=lang)
+    id_destinations = await get_id_destinations(query=message.text, locale=lang)
     if id_destinations:
         await message.answer(f'По запросу <b>"{message.text}"</b> найдены варианты:\n'
                              f'Ознакомтесь с предложенными вариантами и выберите наиболее подходящий',
